@@ -43,11 +43,16 @@ def getData(data_api):
     return data
 def fetch_data():
     global global_data
-    response = requests.get(data_api)
-    data_json = response.json()
-    global_data = pd.DataFrame(data_json)
-    global_data = global_data.replace('na', pd.NA)
-    global_data = global_data.fillna(0)
+    try:
+        response = requests.get(data_api)
+        response.raise_for_status() 
+        data_json = response.json()
+        global_data = pd.DataFrame(data_json)
+        global_data = global_data.replace('na', pd.NA)
+        global_data = global_data.fillna(0)
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred while fetching data: {str(e)}")
+        global_data = pd.DataFrame() 
 class fetching(Resource):
     def get(self):
         fetch_data()
