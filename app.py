@@ -26,6 +26,10 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 api = Api(app)
 CORS(app)
+
+data_api = "http://127.0.0.1:8000/api/ingredients/datatoai"
+global_data = None
+
 def allowed_file(filename):
     return '.' in filename and \
             filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -37,29 +41,43 @@ def getData(data_api):
     data = data.replace('na',np.nan)
     data = data.fillna(0)
     return data
-
-class Tracks(Resource):
+def fetch_data():
+    global global_data
+    response = requests.get(data_api)
+    data_json = response.json()
+    global_data = pd.DataFrame(data_json)
+    global_data = global_data.replace('na', pd.NA)
+    global_data = global_data.fillna(0)
+class fetching(Resource):
     def get(self):
-        result = "ttt"
-        return jsonify(result)
-
+        fetch_data()
+        result = global_data
+        finalresult =  jsonify(result.to_dict(orient='records'))
+        finalresult.headers.add('Access-Control-Allow-Origin', '*')
+        return finalresult
 class dietoptimize(Resource):
     def post(self):
         if request.method == 'POST':
-            # if 'calories' not in request.data:
-            #     result = "No file part"
-            #     return jsonify(result)
-            # data = request.get_json()
+            if global_data is None:
+                fetch_data()
             data = request.get_json()
             calories = data.get('calories')
             ingredient = data.get('ingredient')
-            # calories = request.args.get('calories')
-            # ingredient = request.args.get('ingredient')
-            data_api = "http://127.0.0.1:8000/api/ingredients/datatoai"
-            data = getData(data_api)
+            noIngredient = data.get('noIngredient')
+            unhealthyfat = data.get('unhealthyfat')
+            cholesterol = data.get('cholesterol')
+            sugar = data.get('sugar')
+            sodium = data.get('sodium')
+            calcium = data.get('calcium')
+            iron = data.get('iron')
+            zinc = data.get('zinc')
+            # data_api = "http://127.0.0.1:8000/api/ingredients/datatoai"
+            # data = getData(data_api)
             data_ingredient = pd.DataFrame((ingredient))
-            print("thisiss",data_ingredient['name'])
-            result = DietModel(data,int(calories),data_ingredient)
+            data_noingredient = pd.DataFrame((noIngredient))
+            print("okeokeoke",unhealthyfat,cholesterol,sugar,sodium, calcium , iron, zinc)
+            # print("okeokeoke",data_noingredient["name"].tolist())
+            result = DietModel(global_data,int(calories),data_ingredient, data_noingredient,unhealthyfat,cholesterol,sugar,sodium, calcium , iron, zinc,'male' )
             # print(data[data["OptimalValue"]!= 0])
             # return jsonify(data[data["OptimalValue"]!= 0].to_json(orient = 'columns'))
             # finalresult =  Response(data[data["OptimalValue"]!= 0].to_json(orient="records"), mimetype='application/json')
@@ -73,7 +91,8 @@ class dietoptimize(Resource):
             # return calories
             # return Response(data[data["OptimalValue"]!= 0].to_json(orient="records"), mimetype='application/json')
 
-api.add_resource(Tracks, '/tracks')
+api.add_resource(fetching, '/fetching')
 api.add_resource(dietoptimize, '/diet-list')
 if __name__ == '__main__':
+     fetch_data()
      app.run()

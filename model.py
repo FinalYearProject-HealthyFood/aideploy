@@ -20,12 +20,48 @@ def extract_gram(table):
     res = {'Protein Grams':protein_grams, 'Carbohydrates Grams':carbs_grams,'Fat Grams':fat_grams}
     return res
 
-def DietModel(days_data,calories, data_ingredients):
+def calculate_intake_values(calories, gender = "male"):
+    intake_values = {}
+
+    if gender.lower() == 'male':
+        intake_values['saturated_fat'] = 13 * (calories / 2000)
+        intake_values['trans_fat'] = 2 * (calories / 2000)
+        intake_values['cholesterol'] = 300 * (calories / 2000)
+        intake_values['sugar'] = 36 * (calories / 2000)
+        intake_values['sodium'] = 2300 * (calories / 2000)
+        intake_values['calcium'] = 1000 * (calories / 2000)
+        intake_values['iron'] = 8 * (calories / 2000)
+        intake_values['zinc'] = 11 * (calories / 2000)
+    elif gender.lower() == 'female':
+        intake_values['saturated_fat'] = 13 * (calories / 2000)
+        intake_values['trans_fat'] = 2 * (calories / 2000)
+        intake_values['cholesterol'] = 300 * (calories / 2000)
+        intake_values['sugar'] = 25 * (calories / 2000)
+        intake_values['sodium'] = 2300 * (calories / 2000)
+        intake_values['calcium'] = 1000 * (calories / 2000)
+        intake_values['iron'] = 18 * (calories / 2000)
+        intake_values['zinc'] = 8 * (calories / 2000)
+    else:
+        intake_values['saturated_fat'] = 13 * (calories / 2000)
+        intake_values['trans_fat'] = 2 * (calories / 2000)
+        intake_values['cholesterol'] = 300 * (calories / 2000)
+        intake_values['sugar'] = 36 * (calories / 2000)
+        intake_values['sodium'] = 2300 * (calories / 2000)
+        intake_values['calcium'] = 1000 * (calories / 2000)
+        intake_values['iron'] = 8 * (calories / 2000)
+        intake_values['zinc'] = 11 * (calories / 2000)
+
+    return intake_values
+
+def DietModel(days_data,calories, data_ingredients,noIngredient ,unhealthyfatR,cholesterolR,sugarR,sodiumR, calciumR , ironR, zincR, gender = 'male'):
     G = extract_gram(build_nutritional_values(calories))
+    intakemicros = calculate_intake_values(calories, gender)
     E = G['Carbohydrates Grams']
     F = G['Fat Grams']
     P = G['Protein Grams']
     day_data = days_data
+    if (len(noIngredient) != 0) :
+        day_data = day_data[~day_data["name"].isin(noIngredient["name"].tolist())]
     food = day_data.name.tolist()
     c  = day_data.iloc[:,4].tolist()
     x  = pulp.LpVariable.dicts( "x", indices = food, lowBound=0.0, upBound=1.5, cat='Continuous')
@@ -47,22 +83,30 @@ def DietModel(days_data,calories, data_ingredients):
     # v_c = day_data.calcium.tolist()
     # v_d = day_data.irom.tolist()
     prob  = pulp.LpProblem( "Diet", LpMinimize )
-    prob += pulp.lpSum( [x[food[i]]*c[i] for i in range(len(x))]  )<= (calories + 200)
-    prob += pulp.lpSum( [x[food[i]]*c[i] for i in range(len(x))]  )>= (calories - 200)
-    prob += pulp.lpSum( [x[food[i]]*e[i] for i in range(len(x)) ] )>= E # = 250 gram carb
-    prob += pulp.lpSum( [x[food[i]]*f[i] for i in range(len(x)) ] )>= F  # = 80 gram fat
-    prob += pulp.lpSum( [x[food[i]]*p[i] for i in range(len(x)) ] )>= P # = 70 gram protein
-    prob += pulp.lpSum( [x[food[i]]*sat_f[i] for i in range(len(x)) ] )>=(13.0*35)/100
-    prob += pulp.lpSum( [x[food[i]]*cholesterol[i] for i in range(len(x)) ] )>=10.0
-    prob += pulp.lpSum( [x[food[i]]*cholesterol[i] for i in range(len(x)) ] )<=100.0
-    # prob += pulp.lpSum( [x[food[i]]*trans_f[i] for i in range(len(x)) ] )>= 1.0
-    prob += pulp.lpSum( [x[food[i]]*trans_f[i] for i in range(len(x)) ] )<= 2.2
+    prob += pulp.lpSum( [x[food[i]]*c[i] for i in range(len(x))]  )<= (calories + 100)
+    prob += pulp.lpSum( [x[food[i]]*c[i] for i in range(len(x))]  )>= (calories - 100)
+    prob += pulp.lpSum( [x[food[i]]*e[i] for i in range(len(x)) ] )>= (E - 10) # = 250 gram carb
+    prob += pulp.lpSum( [x[food[i]]*e[i] for i in range(len(x)) ] )<= (E + 10) # = 250 gram carb
+    prob += pulp.lpSum( [x[food[i]]*f[i] for i in range(len(x)) ] )>= (F - 10) # = 80 gram fat
+    prob += pulp.lpSum( [x[food[i]]*f[i] for i in range(len(x)) ] )<= (F + 10) # = 80 gram fat
+    prob += pulp.lpSum( [x[food[i]]*p[i] for i in range(len(x)) ] )>= (P - 10) # = 70 gram protein
+    prob += pulp.lpSum( [x[food[i]]*p[i] for i in range(len(x)) ] )<= (P + 10) # = 70 gram protein
+    if(unhealthyfatR):
+        prob += pulp.lpSum( [x[food[i]]*sat_f[i] for i in range(len(x)) ] )<= intakemicros['saturated_fat']
+        prob += pulp.lpSum( [x[food[i]]*trans_f[i] for i in range(len(x)) ] )<= intakemicros['trans_fat']
+    if(cholesterolR):
+        prob += pulp.lpSum( [x[food[i]]*cholesterol[i] for i in range(len(x)) ] )<=intakemicros['cholesterol']
     # prob += pulp.lpSum( [x[food[i]]*fiber[i] for i in range(len(x)) ] )>=(900.0*35)/100
-    prob += pulp.lpSum( [x[food[i]]*sugar[i] for i in range(len(x)) ] )<= 10.0
-    prob += pulp.lpSum( [x[food[i]]*sodium[i] for i in range(len(x)) ] )<=round((2300.0*35)/100)
-    prob += pulp.lpSum( [x[food[i]]*calium[i] for i in range(len(x)) ] )>=round((1300.0*35)/100)
-    prob += pulp.lpSum( [x[food[i]]*fe[i] for i in range(len(x)) ] )>=round((8.7*35)/100)
-    prob += pulp.lpSum( [x[food[i]]*zn[i] for i in range(len(x)) ] )>=round((8*35)/100)
+    if(sugarR):
+        prob += pulp.lpSum( [x[food[i]]*sugar[i] for i in range(len(x)) ] )<= intakemicros['sugar']
+    if(sodium):
+        prob += pulp.lpSum( [x[food[i]]*sodium[i] for i in range(len(x)) ] )<=intakemicros['sodium']
+    if(calciumR):
+        prob += pulp.lpSum( [x[food[i]]*calium[i] for i in range(len(x)) ] )>=intakemicros['calcium']
+    if(ironR):
+        prob += pulp.lpSum( [x[food[i]]*fe[i] for i in range(len(x)) ] )>=intakemicros['iron']
+    if(zincR):
+        prob += pulp.lpSum( [x[food[i]]*zn[i] for i in range(len(x)) ] )>=intakemicros['zinc']
 
     for f in food:
       prob += x[f]>= food_chosen[f]*0.1
@@ -70,7 +114,13 @@ def DietModel(days_data,calories, data_ingredients):
     # prob += food_chosen['gạo lứt'] >=1
     # prob += x['gạo lứt'] >=1.0
     # food_choices = ['gạo trắng']
-    prob += lpSum([food_chosen[p] for p in data_ingredients['name']]) >= len(data_ingredients)
+    if (len(data_ingredients) != 0) :
+        prob += lpSum([food_chosen[p] for p in data_ingredients['name']]) >= len(data_ingredients)
+    # if (len(noIngredient) != 0) :
+    #     for i in noIngredient:
+    #         prob += food_chosen[i["name"]] == 0
+    #         # prob += x[i["name"]] ==0.0
+    
     prob.solve()
 
     optimal_values = [round(x[food[i]].varValue,2) for i in range(len(food))]
@@ -78,6 +128,7 @@ def DietModel(days_data,calories, data_ingredients):
     day_data['OptimalValue'] = optimal_values
     
     # if (prob.status != 1):
-    #    return []
+    #    return pd.DataFrame()
+    print("status",prob.status)
 
     return day_data[day_data["OptimalValue"] > 0]
