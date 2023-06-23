@@ -53,7 +53,7 @@ def calculate_intake_values(calories, gender = "male"):
 
     return intake_values
 
-def DietModel(days_data,calories, data_ingredients,noIngredient ,unhealthyfatR,cholesterolR,sugarR,sodiumR, calciumR , ironR, zincR, gender = 'male'):
+def DietModel(days_data,calories, data_ingredients,noIngredient ,unhealthyfatR,cholesterolR,sugarR,sodiumR, calciumR , ironR, zincR, gramon ,gender = 'male'):
     G = extract_gram(build_nutritional_values(calories))
     intakemicros = calculate_intake_values(calories, gender)
     E = G['Carbohydrates Grams']
@@ -83,8 +83,8 @@ def DietModel(days_data,calories, data_ingredients,noIngredient ,unhealthyfatR,c
     # v_c = day_data.calcium.tolist()
     # v_d = day_data.irom.tolist()
     prob  = pulp.LpProblem( "Diet", LpMinimize )
-    prob += pulp.lpSum( [x[food[i]]*c[i] for i in range(len(x))]  )<= (calories + 100)
-    prob += pulp.lpSum( [x[food[i]]*c[i] for i in range(len(x))]  )>= (calories - 100)
+    prob += pulp.lpSum( [x[food[i]]*c[i] for i in range(len(x))]  )<= (calories + 70)
+    prob += pulp.lpSum( [x[food[i]]*c[i] for i in range(len(x))]  )>= (calories - 70)
     prob += pulp.lpSum( [x[food[i]]*e[i] for i in range(len(x)) ] )>= (E - 10) # = 250 gram carb
     prob += pulp.lpSum( [x[food[i]]*e[i] for i in range(len(x)) ] )<= (E + 10) # = 250 gram carb
     prob += pulp.lpSum( [x[food[i]]*f[i] for i in range(len(x)) ] )>= (F - 10) # = 80 gram fat
@@ -116,10 +116,11 @@ def DietModel(days_data,calories, data_ingredients,noIngredient ,unhealthyfatR,c
     # food_choices = ['gạo trắng']
     if (len(data_ingredients) != 0) :
         prob += lpSum([food_chosen[p] for p in data_ingredients['name']]) >= len(data_ingredients)
-    # if (len(noIngredient) != 0) :
-    #     for i in noIngredient:
-    #         prob += food_chosen[i["name"]] == 0
-    #         # prob += x[i["name"]] ==0.0
+    if(gramon and (len(data_ingredients) != 0)):
+        for index, row in data_ingredients.iterrows():
+            # print("this is", i)
+            prob += x[row['name']] == row['quantity']
+            # prob += x[row['name']] <= row['quantity'] - 0.1
     
     prob.solve()
 

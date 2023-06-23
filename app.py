@@ -27,7 +27,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 api = Api(app)
 CORS(app)
 
-data_api = "http://127.0.0.1:8000/api/ingredients/datatoai"
+data_api = "https://api.healthyfoodstore.site/api/ingredients/datatoai"
 global_data = None
 
 def allowed_file(filename):
@@ -76,13 +76,15 @@ class dietoptimize(Resource):
             calcium = data.get('calcium')
             iron = data.get('iron')
             zinc = data.get('zinc')
+            gramon = data.get('gramon')
             # data_api = "http://127.0.0.1:8000/api/ingredients/datatoai"
             # data = getData(data_api)
             data_ingredient = pd.DataFrame((ingredient))
             data_noingredient = pd.DataFrame((noIngredient))
             print("okeokeoke",unhealthyfat,cholesterol,sugar,sodium, calcium , iron, zinc)
+            print("okeokeoke2",gramon)
             # print("okeokeoke",data_noingredient["name"].tolist())
-            result = DietModel(global_data,int(calories),data_ingredient, data_noingredient,unhealthyfat,cholesterol,sugar,sodium, calcium , iron, zinc,'male' )
+            result = DietModel(global_data,int(calories),data_ingredient, data_noingredient,unhealthyfat,cholesterol,sugar,sodium, calcium , iron, zinc, gramon,'male' )
             # print(data[data["OptimalValue"]!= 0])
             # return jsonify(data[data["OptimalValue"]!= 0].to_json(orient = 'columns'))
             # finalresult =  Response(data[data["OptimalValue"]!= 0].to_json(orient="records"), mimetype='application/json')
