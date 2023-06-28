@@ -64,7 +64,7 @@ def DietModel(days_data,calories, data_ingredients,noIngredient ,unhealthyfatR,c
         day_data = day_data[~day_data["name"].isin(noIngredient["name"].tolist())]
     food = day_data.name.tolist()
     c  = day_data.iloc[:,4].tolist()
-    x  = pulp.LpVariable.dicts( "x", indices = food, lowBound=0.0, upBound=1.5, cat='Continuous')
+    x  = pulp.LpVariable.dicts( "x", indices = food, lowBound=0.0, upBound=2.0, cat='Continuous')
     food_chosen = pulp.LpVariable.dicts("Chosen",indices = food,lowBound = 0,upBound = 1,cat='Integer')
     e = day_data.iloc[:,6].tolist()
     f = day_data.iloc[:,7].tolist()
@@ -83,8 +83,9 @@ def DietModel(days_data,calories, data_ingredients,noIngredient ,unhealthyfatR,c
     # v_c = day_data.calcium.tolist()
     # v_d = day_data.irom.tolist()
     prob  = pulp.LpProblem( "Diet", LpMinimize )
-    prob += pulp.lpSum( [x[food[i]]*c[i] for i in range(len(x))]  )<= (calories + 70)
-    prob += pulp.lpSum( [x[food[i]]*c[i] for i in range(len(x))]  )>= (calories - 70)
+    prob += pulp.lpSum( [x[food[i]]*c[i] for i in range(len(x)) ])
+    prob += pulp.lpSum( [x[food[i]]*c[i] for i in range(len(x))]  )<= (calories + 20)
+    prob += pulp.lpSum( [x[food[i]]*c[i] for i in range(len(x))]  )>= (calories - 20)
     prob += pulp.lpSum( [x[food[i]]*e[i] for i in range(len(x)) ] )>= (E - 10) # = 250 gram carb
     prob += pulp.lpSum( [x[food[i]]*e[i] for i in range(len(x)) ] )<= (E + 10) # = 250 gram carb
     prob += pulp.lpSum( [x[food[i]]*f[i] for i in range(len(x)) ] )>= (F - 10) # = 80 gram fat
@@ -128,8 +129,8 @@ def DietModel(days_data,calories, data_ingredients,noIngredient ,unhealthyfatR,c
 
     day_data['OptimalValue'] = optimal_values
     
-    # if (prob.status != 1):
-    #    return pd.DataFrame()
+    if (prob.status != 1):
+       return pd.DataFrame()
     print("status",prob.status)
 
     return day_data[day_data["OptimalValue"] > 0]
